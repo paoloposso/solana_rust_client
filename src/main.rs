@@ -1,55 +1,53 @@
-use std::str::FromStr;
+use std::{str::FromStr, error::Error};
 
 use solana_client::rpc_client::RpcClient;
-use solana_program::{pubkey::{Pubkey}, example_mocks::solana_sdk::signature::Keypair};
+use solana_program::{pubkey::{Pubkey}};
+use solana_sdk::{commitment_config::CommitmentConfig, system_transaction, signature::{Keypair, Signature}, signer::Signer};
 
 fn main() {
-    check_balance("https://api.devnet.solana.com", "5Z6FPt4C247g1cUDbeA5mphRxGmmupgwcnaJvFJLCXGn");
-    // request_air_drop("https://api.devnet.solana.com");
-}
+    // let rpc = RpcClient::new_with_commitment("https://api.devnet.solana.com", CommitmentConfig::confirmed());
+    let rpc = RpcClient::new("https://api.devnet.solana.com");
 
-fn check_balance(url: &str, public_key: &str) {
-    let client = RpcClient::new(url);
+    let sender = Keypair::new();
+    let receiver = Keypair::new();
+    println!("Sender: {:?}", sender.pubkey());
+    println!("Receiver: {:?}", receiver.pubkey());
 
-    if let Ok(pubkey) = Pubkey::from_str(public_key) {
-        let airdrop_res = client.request_airdrop(&pubkey, 10000000000);
+    let amount = 100000000;
 
-        let balance_result = client.get_balance(&pubkey);
+    if let Ok(airdrop_signature) = request_air_drop(&rpc, &sender.pubkey(), 1000000000) {
+        println!("Airdrop finished! Signature: {:?}",  airdrop_signature);
 
-        match balance_result {
-            Ok(balance) => println!("Balance of {:?} is {:?}", pubkey, balance),
+        if let Ok(balance) = check_balance(&rpc, &sender.pubkey()) {
+            println!("Sender balance: {:?}", balance);
+        }
+
+        let res = transfer_funds(&rpc, &sender, &receiver.pubkey(), amount);
+        match res {
+            Ok(sig) => { 
+                println!("Transfer of {:?} finished. Signature: {:?}", amount, sig);
+                if let Ok(balance) = check_balance(&rpc, &sender.pubkey()) {
+                    println!("Sender balance after transfer: {:?}", balance);
+                }
+                if let Ok(balance) = check_balance(&rpc, &receiver.pubkey()) {
+                    println!("Receiver balance after transfer: {:?}", balance);
+                }
+            },
             Err(err) => println!("Error: {:?}", err),
         }
     } else {
-        println!("Invalid public key");
+        println!("Airdrop failed");
     }
 }
 
-fn request_air_drop(url: &str) {
-    let client = RpcClient::new(url);
+fn check_balance(rpc_client: &RpcClient, public_key: &Pubkey) -> core::result::Result<u64, Box<dyn Error>> {
+    Ok(rpc_client.get_balance(&public_key)?)
+}
 
-    let key_pair = Keypair::new();
-    
-    let mut balance_result = client.get_balance(&key_pair.pubkey());
+fn request_air_drop(rpc_client: &RpcClient, pub_key: &Pubkey, amount_lamports: u64) -> core::result::Result<Signature, Box<dyn Error>> {
+    Ok(rpc_client.request_airdrop(&pub_key, amount_lamports)?)
+}
 
-    match balance_result {
-        Ok(balance) => println!("Balance of {:?} is {:?}", key_pair.pubkey(), balance),
-        Err(err) => println!("Error: {:?}", err),
-    }
-
-    let airdrop_res = client.request_airdrop(&key_pair.pubkey(), 10000000);
-
-    match airdrop_res {
-        Ok(sig) => {
-            println!("Airdrop executed. Signature: {:?}", sig);
-
-            balance_result = client.get_balance(&key_pair.pubkey());
-
-            match balance_result {
-                Ok(balance) => println!("Balance of {:?} is {:?}", key_pair.pubkey(), balance),
-                Err(err) => println!("Error: {:?}", err),
-            }
-        },
-        Err(err) => println!("Error: {:?}", err),
-    }
+fn transfer_funds(rpc_client: &RpcClient, sender_keypair: &Keypair, recipient_pub_key: &Pubkey, amount_lamports: u64) -> core::result::Result<Signature, Box<dyn Error>> {
+    Ok(rpc_client.send_transaction(&system_transaction::transfer(&sender_keypair, &recipient_pub_key, amount_lamports, rpc_client.get_latest_blockhash()?))?)
 }
