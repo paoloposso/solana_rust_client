@@ -5,7 +5,7 @@ use solana_sdk::signer::Signer;
 const URL: &str = "https://api.devnet.solana.com";
 
 fn main() {
-    let rpc = RpcClient::new(URL);
+    let rpc_client = RpcClient::new(URL);
 
     let sender = create_keypair();
     let receiver = create_keypair();
@@ -13,22 +13,22 @@ fn main() {
     println!("Sender: {:?}", sender.pubkey());
     println!("Receiver: {:?}", receiver.pubkey());
 
-    let amount = 0.5;
-
-    if let Ok(airdrop_signature) = request_air_drop(&rpc, &sender.pubkey(), 1.0) {
+    if let Ok(airdrop_signature) = request_air_drop(&rpc_client, &sender.pubkey(), 1.0) {
         println!("Airdrop finished! Signature: {:?}",  airdrop_signature);
 
-        if let Ok(balance) = check_balance(&rpc, &sender.pubkey()) {
+        if let Ok(balance) = check_balance(&rpc_client, &sender.pubkey()) {
             println!("Sender balance: {:?}", balance);
         }
 
-        match transfer_funds(&rpc, &sender, &receiver.pubkey(), amount) {
+        let transfer_amount = 0.5;
+
+        match transfer_funds(&rpc_client, &sender, &receiver.pubkey(), transfer_amount) {
             Ok(sig) => { 
-                println!("Transfer of {:?} finished. Signature: {:?}", amount, sig);
-                if let Ok(balance) = check_balance(&rpc, &sender.pubkey()) {
+                println!("Transfer of {:?} finished. Signature: {:?}", transfer_amount, sig);
+                if let Ok(balance) = check_balance(&rpc_client, &sender.pubkey()) {
                     println!("Sender balance after transfer: {:?}", balance);
                 }
-                if let Ok(balance) = check_balance(&rpc, &receiver.pubkey()) {
+                if let Ok(balance) = check_balance(&rpc_client, &receiver.pubkey()) {
                     println!("Receiver balance after transfer: {:?}", balance);
                 }
             },

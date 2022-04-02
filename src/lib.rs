@@ -1,6 +1,6 @@
 use std::error::Error;
 use solana_client::rpc_client::RpcClient;
-use solana_program::pubkey::{Pubkey};
+use solana_program::pubkey::Pubkey;
 use solana_sdk::{system_transaction, signature::{Keypair, Signature}};
 
 const LAMPORTS_PER_SOL: f64 = 1000000000.0;
@@ -24,7 +24,8 @@ pub fn request_air_drop(rpc_client: &RpcClient, pub_key: &Pubkey, amount_sol: f6
     Ok(sig)
 }
 
-pub fn transfer_funds(rpc_client: &RpcClient, sender_keypair: &Keypair, receiver_pub_key: &Pubkey, amount_sol: f64) -> core::result::Result<Signature, Box<dyn Error>> {
+pub fn transfer_funds(rpc_client: &RpcClient, sender_keypair: &Keypair, receiver_pub_key: &Pubkey, amount_sol: f64) 
+        -> core::result::Result<Signature, Box<dyn Error>> {
     let amount_lamports = (amount_sol * LAMPORTS_PER_SOL) as u64;
     
     Ok(rpc_client.send_and_confirm_transaction(
